@@ -6,6 +6,45 @@ pub enum Error {
 
 pub type Result<T> = core::result::Result<T, Error>;
 
+#[derive(Debug)]
+pub enum OBIS {
+    Version,
+    DateTime,
+    EquipmentIdentifier,
+    MeterReadingToTariff1,
+    MeterReadingToTariff2,
+    MeterReadingByTariff1,
+    MeterReadingByTariff2,
+    TariffIndicator,
+    PowerDelivered,
+    PowerReceived,
+    PowerFailures,
+    LongPowerFailures,
+    PowerFailureEventLog,
+    VoltageSagsL1,
+    VoltageSagsL2,
+    VoltageSagsL3,
+    VoltageSwellsL1,
+    VoltageSwellsL2,
+    VoltageSwellsL3,
+    TextMessage,
+    InstantaneousVoltageL1,
+    InstantaneousVoltageL2,
+    InstantaneousVoltageL3,
+    InstantaneousCurrentL1,
+    InstantaneousCurrentL2,
+    InstantaneousCurrentL3,
+    InstantaneousActivePowerPlusL1,
+    InstantaneousActivePowerPlusL2,
+    InstantaneousActivePowerPlusL3,
+    InstantaneousActivePowerNegL1,
+    InstantaneousActivePowerNegL2,
+    InstantaneousActivePowerNegL3,
+    SlaveDeviceType(u8),
+    SlaveEquipmentIdentifier(u8),
+    SlaveMeterReading(u8),
+}
+
 pub struct Readout {
     pub buffer: [u8; 1024], // Maximum size of a Readout
 }
@@ -43,9 +82,16 @@ impl Readout {
 }
 
 pub struct Telegram<'a> {
-    prefix: &'a str,
-    identification: &'a str,
+    pub prefix: &'a str,
+    pub identification: &'a str,
     object_buffer: &'a str,
+}
+
+impl<'a> Telegram<'a> {
+    pub fn objects(&self) -> () {
+        self.object_buffer.lines();
+            // .map()
+    }
 }
 
 #[cfg(test)]
@@ -62,6 +108,11 @@ mod tests {
             buffer,
         };
 
-        readout.to_telegram().unwrap();
+        let telegram = readout.to_telegram().unwrap();
+        
+        assert_eq!(telegram.prefix, "ISK");
+        assert_eq!(telegram.identification, "\\2M550E-1012");
+
+        // TODO: objects
     }
 }
