@@ -11,10 +11,10 @@ pub struct Readout {
 }
 
 impl Readout {
-    pub fn to_telegram<'a>(&'a self) -> Result<()> { //Result<Readout<'a>>
+    pub fn to_telegram<'a>(&'a self) -> Result<Telegram<'a>> {
         let buffer = core::str::from_utf8(&self.buffer).map_err(|_| Error::InvalidFormat)?;
         
-        if (buffer.len() < 16) {
+        if buffer.len() < 16 {
             return Err(Error::InvalidFormat);
         }
 
@@ -34,13 +34,11 @@ impl Readout {
         let prefix = header.get(1..4).ok_or(Error::InvalidFormat)?;
         let identification = header.get(5..).ok_or(Error::InvalidFormat)?;
 
-
-        eprintln!("'{}'", prefix);
-        eprintln!("'{}'", identification);
-        eprintln!("'{}'", header);
-        eprintln!("'{}'", data);
-
-        Ok(())
+        Ok(Telegram {
+            prefix,
+            identification,
+            object_buffer: data.get(4..data.len()-3).ok_or(Error::InvalidFormat)?,
+        })
     }
 }
 
@@ -49,14 +47,6 @@ pub struct Telegram<'a> {
     identification: &'a str,
     object_buffer: &'a str,
 }
-
-
-
-// impl<'a> Readout<'a> {
-//     pub fn parse(input: &'a str) -> Result<Readout<'a>> {
-        
-//     }
-// }
 
 #[cfg(test)]
 mod tests {
