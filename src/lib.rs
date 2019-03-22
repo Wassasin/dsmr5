@@ -79,7 +79,7 @@ impl FixedFloat {
         let lower = u64::from_str_radix(&lower[1..], 10).map_err(|_| Error::InvalidFormat)?;
 
         Ok(FixedFloat {
-            buffer: upper*10u64.pow(3) + lower,
+            buffer: upper*10u64.pow(point as u32) + lower,
             point,
         })
     }
@@ -131,9 +131,9 @@ pub enum OBIS<'a> {
     InstantaneousActivePowerNegL1(FixedFloat),
     InstantaneousActivePowerNegL2(FixedFloat),
     InstantaneousActivePowerNegL3(FixedFloat),
-    SlaveDeviceType(u8),
-    SlaveEquipmentIdentifier(u8),
-    SlaveMeterReading(u8),
+    SlaveDeviceType(u8, FixedInteger),
+    SlaveEquipmentIdentifier(u8, OctetString<'a>),
+    SlaveMeterReading(u8, TST, FixedFloat),
 }
 
 impl<'a> OBIS<'a> {
@@ -174,7 +174,15 @@ impl<'a> OBIS<'a> {
             "1-0:22.7.0" => Ok(OBIS::InstantaneousActivePowerNegL1(FixedFloat::parse(body, 5, 3)?)),
             "1-0:42.7.0" => Ok(OBIS::InstantaneousActivePowerNegL2(FixedFloat::parse(body, 5, 3)?)),
             "1-0:62.7.0" => Ok(OBIS::InstantaneousActivePowerNegL3(FixedFloat::parse(body, 5, 3)?)),
-            _ => Err(Error::UnknownObis),
+            _ => {
+                if reference.len() != 10 || &reference[..2] == "0-" {
+                    return Err(Error::UnknownObis);
+                }
+
+                let channel = u8::from_str_radix(&reference[2..=2], 10).map_err(|_| Error::InvalidFormat)?;
+
+                Err(Error::UnknownObis)
+            },
         }
     }
 }
