@@ -175,13 +175,30 @@ impl<'a> OBIS<'a> {
             "1-0:42.7.0" => Ok(OBIS::InstantaneousActivePowerNegL2(FixedFloat::parse(body, 5, 3)?)),
             "1-0:62.7.0" => Ok(OBIS::InstantaneousActivePowerNegL3(FixedFloat::parse(body, 5, 3)?)),
             _ => {
-                if reference.len() != 10 || &reference[..2] == "0-" {
+                if reference.len() != 10 || reference.get(..2).ok_or(Error::InvalidFormat)? != "0-" {
                     return Err(Error::UnknownObis);
                 }
 
                 let channel = u8::from_str_radix(&reference[2..=2], 10).map_err(|_| Error::InvalidFormat)?;
+                let subreference = &reference[4..];
 
-                Err(Error::UnknownObis)
+                match subreference {
+                    "24.1.0" => Ok(OBIS::SlaveDeviceType(channel, FixedInteger::parse(body, 3)?)),
+                    "96.1.0" => Ok(OBIS::SlaveEquipmentIdentifier::<'a>(channel, OctetString::parse_max(body, 96)?)),
+                    "24.2.1" => {
+                        let end = body[1..].find("(").ok_or(Error::InvalidFormat)?;
+                        let (time, measurement) = body.split_at(end+1);
+
+                        let period = measurement.find(".").ok_or(Error::InvalidFormat)?;
+
+                        Ok(OBIS::SlaveMeterReading(
+                            channel,
+                            TST::parse(time)?,
+                            FixedFloat::parse(measurement, 8, 9 - period as u8)?,
+                        ))
+                    },
+                    _ => Err(Error::UnknownObis),
+                }
             },
         }
     }
