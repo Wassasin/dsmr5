@@ -2,14 +2,64 @@
 pub enum Error {
     InvalidFormat,
     InvalidChecksum,
+    UnknownObis,
 }
 
 pub type Result<T> = core::result::Result<T, Error>;
 
 #[derive(Debug)]
-pub enum OBIS {
-    Version,
-    DateTime,
+pub struct OctetString<'a>(&'a str);
+
+impl<'a> OctetString<'a> {
+    pub fn parse(body: &'a str, length: usize) -> Result<OctetString<'a>> {
+        Ok(OctetString(body.get(1..length+1).ok_or(Error::InvalidFormat)?))
+    }
+}
+
+#[derive(Debug)]
+pub struct TST {
+    year: u8,
+    month: u8,
+    day: u8,
+    hour: u8,
+    minute: u8,
+    second: u8,
+    dst: bool,
+}
+
+impl TST {
+    pub fn parse(body: &str) -> Result<TST> {
+        if body.len() < 15 {
+            return Err(Error::InvalidFormat);
+        }
+
+        let parsetwo = |i| {
+            u8::from_str_radix(
+                &body[i..=(i+1)],
+                10,
+            ).map_err(|_| Error::InvalidFormat)
+        };
+
+        Ok(TST {
+            year: parsetwo(1)?,
+            month: parsetwo(3)?,
+            day: parsetwo(5)?,
+            hour: parsetwo(7)?,
+            minute: parsetwo(9)?,
+            second: parsetwo(11)?,
+            dst: match &body[13..=13] {
+                "S" => Ok(true),
+                "W" => Ok(false),
+                _ => Err(Error::InvalidFormat),
+            }?,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub enum OBIS<'a> {
+    Version(OctetString<'a>),
+    DateTime(TST),
     EquipmentIdentifier,
     MeterReadingToTariff1,
     MeterReadingToTariff2,
@@ -43,6 +93,19 @@ pub enum OBIS {
     SlaveDeviceType(u8),
     SlaveEquipmentIdentifier(u8),
     SlaveMeterReading(u8),
+}
+
+impl<'a> OBIS<'a> {
+    fn parse(line: &'a str) -> Result<OBIS<'a>> {
+        let reference_end = line.find('(').ok_or(Error::InvalidFormat)?;
+        let (reference, body) = line.split_at(reference_end);
+
+        match reference {
+            "1-3:0.2.8" => Ok(OBIS::Version::<'a>(OctetString::parse(body, 2)?)),
+            "0-0:1.0.0" => Ok(OBIS::DateTime(TST::parse(body)?)),
+            _ => Err(Error::UnknownObis)
+        }
+    }
 }
 
 pub struct Readout {
@@ -88,9 +151,8 @@ pub struct Telegram<'a> {
 }
 
 impl<'a> Telegram<'a> {
-    pub fn objects(&self) -> () {
-        self.object_buffer.lines();
-            // .map()
+    pub fn objects(&self) -> impl core::iter::Iterator<Item = Result<OBIS<'a>>> {
+        self.object_buffer.lines().map(OBIS::parse)
     }
 }
 
@@ -113,6 +175,7 @@ mod tests {
         assert_eq!(telegram.prefix, "ISK");
         assert_eq!(telegram.identification, "\\2M550E-1012");
 
-        // TODO: objects
+        let objects: Vec<crate::Result<crate::OBIS>> = telegram.objects().collect();
+        println!("{:?}", objects);
     }
 }
