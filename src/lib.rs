@@ -16,6 +16,15 @@ impl<'a> OctetString<'a> {
             body.get(1..length + 1).ok_or(Error::InvalidFormat)?,
         ))
     }
+
+    pub fn parse_max(body: &'a str, max_length: usize) -> Result<OctetString<'a>> {
+        let end = body.find(')').ok_or(Error::InvalidFormat)? - 1;
+        if end > max_length {
+            return Err(Error::InvalidFormat);
+        }
+
+        OctetString::parse(body, end)
+    }
 }
 
 #[derive(Debug)]
@@ -55,39 +64,73 @@ impl TST {
 }
 
 #[derive(Debug)]
+pub struct FixedFloat {
+    buffer: u64,
+    point: u8,
+}
+
+impl FixedFloat {
+    pub fn parse(body: &str, length: usize, point: u8) -> Result<FixedFloat> {
+        // Do not forget the extra '.'
+        let buffer = body.get(1..length + 2).ok_or(Error::InvalidFormat)?;
+        let (upper, lower) = buffer.split_at(length - point as usize);
+
+        let upper = u64::from_str_radix(upper, 10).map_err(|_| Error::InvalidFormat)?;
+        let lower = u64::from_str_radix(&lower[1..], 10).map_err(|_| Error::InvalidFormat)?;
+
+        Ok(FixedFloat {
+            buffer: upper*10u64.pow(3) + lower,
+            point,
+        })
+    }
+}
+
+#[derive(Debug)]
+pub struct FixedInteger(u64);
+
+impl FixedInteger {
+    pub fn parse(body: &str, length: usize) -> Result<FixedInteger> {
+        let buffer = body.get(1..length + 1).ok_or(Error::InvalidFormat)?;
+        let number = u64::from_str_radix(buffer, 10).map_err(|_| Error::InvalidFormat)?;
+
+        Ok(FixedInteger(number))
+    }
+}
+
+#[derive(Debug)]
 pub enum OBIS<'a> {
     Version(OctetString<'a>),
     DateTime(TST),
-    EquipmentIdentifier,
-    MeterReadingToTariff1,
-    MeterReadingToTariff2,
-    MeterReadingByTariff1,
-    MeterReadingByTariff2,
-    TariffIndicator,
-    PowerDelivered,
-    PowerReceived,
-    PowerFailures,
-    LongPowerFailures,
-    PowerFailureEventLog,
-    VoltageSagsL1,
-    VoltageSagsL2,
-    VoltageSagsL3,
-    VoltageSwellsL1,
-    VoltageSwellsL2,
-    VoltageSwellsL3,
-    TextMessage,
-    InstantaneousVoltageL1,
-    InstantaneousVoltageL2,
-    InstantaneousVoltageL3,
-    InstantaneousCurrentL1,
-    InstantaneousCurrentL2,
-    InstantaneousCurrentL3,
-    InstantaneousActivePowerPlusL1,
-    InstantaneousActivePowerPlusL2,
-    InstantaneousActivePowerPlusL3,
-    InstantaneousActivePowerNegL1,
-    InstantaneousActivePowerNegL2,
-    InstantaneousActivePowerNegL3,
+    EquipmentIdentifier(OctetString<'a>),
+    MeterReadingToTariff1(FixedFloat),
+    MeterReadingToTariff2(FixedFloat),
+    MeterReadingByTariff1(FixedFloat),
+    MeterReadingByTariff2(FixedFloat),
+    TariffIndicator(OctetString<'a>),
+    PowerDelivered(FixedFloat),
+    PowerReceived(FixedFloat),
+    PowerFailures(FixedInteger),
+    LongPowerFailures(FixedInteger),
+    PowerFailureEventLog, // TODO
+    VoltageSagsL1(FixedInteger),
+    VoltageSagsL2(FixedInteger),
+    VoltageSagsL3(FixedInteger),
+    VoltageSwellsL1(FixedInteger),
+    VoltageSwellsL2(FixedInteger),
+    VoltageSwellsL3(FixedInteger),
+    TextMessage, // TODO
+    InstantaneousVoltageL1(FixedFloat),
+    InstantaneousVoltageL2(FixedFloat),
+    InstantaneousVoltageL3(FixedFloat),
+    InstantaneousCurrentL1(FixedInteger),
+    InstantaneousCurrentL2(FixedInteger),
+    InstantaneousCurrentL3(FixedInteger),
+    InstantaneousActivePowerPlusL1(FixedFloat),
+    InstantaneousActivePowerPlusL2(FixedFloat),
+    InstantaneousActivePowerPlusL3(FixedFloat),
+    InstantaneousActivePowerNegL1(FixedFloat),
+    InstantaneousActivePowerNegL2(FixedFloat),
+    InstantaneousActivePowerNegL3(FixedFloat),
     SlaveDeviceType(u8),
     SlaveEquipmentIdentifier(u8),
     SlaveMeterReading(u8),
@@ -101,6 +144,36 @@ impl<'a> OBIS<'a> {
         match reference {
             "1-3:0.2.8" => Ok(OBIS::Version::<'a>(OctetString::parse(body, 2)?)),
             "0-0:1.0.0" => Ok(OBIS::DateTime(TST::parse(body)?)),
+            "0-0:96.1.1" => Ok(OBIS::EquipmentIdentifier::<'a>(OctetString::parse_max(body, 96)?)),
+            "1-0:1.8.1" => Ok(OBIS::MeterReadingToTariff1(FixedFloat::parse(body, 9, 3)?)),
+            "1-0:1.8.2" => Ok(OBIS::MeterReadingToTariff2(FixedFloat::parse(body, 9, 3)?)),
+            "1-0:2.8.1" => Ok(OBIS::MeterReadingByTariff1(FixedFloat::parse(body, 9, 3)?)),
+            "1-0:2.8.2" => Ok(OBIS::MeterReadingByTariff2(FixedFloat::parse(body, 9, 3)?)),
+            "0-0:96.14.0" => Ok(OBIS::TariffIndicator::<'a>(OctetString::parse(body, 4)?)),
+            "1-0:1.7.0" => Ok(OBIS::PowerDelivered(FixedFloat::parse(body, 5, 3)?)),
+            "1-0:2.7.0" => Ok(OBIS::PowerReceived(FixedFloat::parse(body, 5, 3)?)),
+            "0-0:96.7.21" => Ok(OBIS::PowerFailures(FixedInteger::parse(body, 5)?)),
+            "0-0:96.7.9" => Ok(OBIS::LongPowerFailures(FixedInteger::parse(body, 5)?)),
+            "1-0:99.97.0" => Ok(OBIS::PowerFailureEventLog), // TODO
+            "1-0:32.32.0" => Ok(OBIS::VoltageSagsL1(FixedInteger::parse(body, 5)?)),
+            "1-0:52.32.0" => Ok(OBIS::VoltageSagsL2(FixedInteger::parse(body, 5)?)),
+            "1-0:72.32.0" => Ok(OBIS::VoltageSagsL3(FixedInteger::parse(body, 5)?)),
+            "1-0:32.36.0" => Ok(OBIS::VoltageSwellsL1(FixedInteger::parse(body, 5)?)),
+            "1-0:52.36.0" => Ok(OBIS::VoltageSwellsL2(FixedInteger::parse(body, 5)?)),
+            "1-0:72.36.0" => Ok(OBIS::VoltageSwellsL3(FixedInteger::parse(body, 5)?)),
+            "0-0:96.13.0" => Ok(OBIS::TextMessage), // TODO
+            "1-0:32.7.0" => Ok(OBIS::InstantaneousVoltageL1(FixedFloat::parse(body, 4, 1)?)),
+            "1-0:52.7.0" => Ok(OBIS::InstantaneousVoltageL2(FixedFloat::parse(body, 4, 1)?)),
+            "1-0:72.7.0" => Ok(OBIS::InstantaneousVoltageL3(FixedFloat::parse(body, 4, 1)?)),
+            "1-0:31.7.0" => Ok(OBIS::InstantaneousCurrentL1(FixedInteger::parse(body, 3)?)),
+            "1-0:51.7.0" => Ok(OBIS::InstantaneousCurrentL2(FixedInteger::parse(body, 3)?)),
+            "1-0:71.7.0" => Ok(OBIS::InstantaneousCurrentL3(FixedInteger::parse(body, 3)?)),
+            "1-0:21.7.0" => Ok(OBIS::InstantaneousActivePowerPlusL1(FixedFloat::parse(body, 5, 3)?)),
+            "1-0:41.7.0" => Ok(OBIS::InstantaneousActivePowerPlusL2(FixedFloat::parse(body, 5, 3)?)),
+            "1-0:61.7.0" => Ok(OBIS::InstantaneousActivePowerPlusL3(FixedFloat::parse(body, 5, 3)?)),
+            "1-0:22.7.0" => Ok(OBIS::InstantaneousActivePowerNegL1(FixedFloat::parse(body, 5, 3)?)),
+            "1-0:42.7.0" => Ok(OBIS::InstantaneousActivePowerNegL2(FixedFloat::parse(body, 5, 3)?)),
+            "1-0:62.7.0" => Ok(OBIS::InstantaneousActivePowerNegL3(FixedFloat::parse(body, 5, 3)?)),
             _ => Err(Error::UnknownObis),
         }
     }
@@ -172,7 +245,8 @@ mod tests {
         assert_eq!(telegram.prefix, "ISK");
         assert_eq!(telegram.identification, "\\2M550E-1012");
 
-        let objects: Vec<crate::Result<crate::OBIS>> = telegram.objects().collect();
-        println!("{:?}", objects);
+        telegram.objects().for_each(|o| {
+            println!("{:?}", o);
+        });
     }
 }
