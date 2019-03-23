@@ -2,11 +2,13 @@
 
 #![no_std]
 
-mod obis;
-
 pub mod types;
 
+mod obis;
+mod reader;
+
 pub use crate::obis::*;
+pub use crate::reader::*;
 
 #[derive(Debug)]
 pub enum Error {
