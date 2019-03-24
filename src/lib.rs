@@ -2,6 +2,7 @@
 
 #![no_std]
 
+pub mod state;
 pub mod types;
 
 mod obis;
@@ -99,7 +100,6 @@ mod tests {
         left.copy_from_slice(file.as_slice());
 
         let readout = crate::Readout { buffer };
-
         let telegram = readout.to_telegram().unwrap();
 
         assert_eq!(telegram.prefix, "ISK");
@@ -109,14 +109,14 @@ mod tests {
             println!("{:?}", o); // to see use `$ cargo test -- --nocapture`
             let o = o.unwrap();
 
-            use crate::OBIS;
+            use crate::OBIS::*;
             use core::convert::From;
             match o {
-                OBIS::Version(v) => {
+                Version(v) => {
                     let b: std::vec::Vec<u8> = v.as_octets().map(|b| b.unwrap()).collect();
                     assert_eq!(b, [80]);
                 }
-                OBIS::DateTime(tst) => {
+                DateTime(tst) => {
                     assert_eq!(
                         tst,
                         crate::types::TST {
@@ -130,21 +130,21 @@ mod tests {
                         }
                     );
                 }
-                OBIS::EquipmentIdentifier(ei) => {
+                EquipmentIdentifier(ei) => {
                     let b: std::vec::Vec<u8> = ei.as_octets().map(|b| b.unwrap()).collect();
                     assert_eq!(std::str::from_utf8(&b).unwrap(), "E0043007052870318");
                 }
-                OBIS::MeterReadingToTariff1(mr) => {
+                MeterReadingTo(crate::Tariff::Tariff1, mr) => {
                     assert_eq!(f64::from(&mr), 576.239);
                 }
-                OBIS::MeterReadingToTariff2(mr) => {
+                MeterReadingTo(crate::Tariff::Tariff2, mr) => {
                     assert_eq!(f64::from(&mr), 465.162);
                 }
-                OBIS::TariffIndicator(ti) => {
+                TariffIndicator(ti) => {
                     let b: std::vec::Vec<u8> = ti.as_octets().map(|b| b.unwrap()).collect();
                     assert_eq!(b, [0, 2]);
                 }
-                OBIS::PowerFailures(crate::types::UFixedInteger(pf)) => {
+                PowerFailures(crate::types::UFixedInteger(pf)) => {
                     assert_eq!(pf, 9);
                 }
                 _ => (), // Do not test the rest.
