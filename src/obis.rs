@@ -129,10 +129,10 @@ impl<'a> OBIS<'a> {
                         OctetString::parse_max(body, 96)?,
                     )),
                     "24.2.1" => {
-                        let end = body[1..].find("(").ok_or(Error::InvalidFormat)?;
+                        let end = body[1..].find('(').ok_or(Error::InvalidFormat)?;
                         let (time, measurement) = body.split_at(end + 1);
 
-                        let period = measurement.find(".").ok_or(Error::InvalidFormat)?;
+                        let period = measurement.find('.').ok_or(Error::InvalidFormat)?;
 
                         Ok(OBIS::SlaveMeterReading(
                             channel,

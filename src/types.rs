@@ -12,7 +12,7 @@ impl<'a> OctetString<'a> {
     /// Parse a fixed length string from an OBIS body.
     pub fn parse(body: &'a str, length: usize) -> Result<OctetString<'a>> {
         Ok(OctetString(
-            body.get(1..length + 1).ok_or(Error::InvalidFormat)?,
+            body.get(1..=length).ok_or(Error::InvalidFormat)?,
         ))
     }
 
@@ -90,7 +90,7 @@ impl UFixedDouble {
         let lower = u64::from_str_radix(&lower[1..], 10).map_err(|_| Error::InvalidFormat)?;
 
         Ok(UFixedDouble {
-            buffer: upper * 10u64.pow(point as u32) + lower,
+            buffer: upper * 10u64.pow(u32::from(point)) + lower,
             point,
         })
     }
@@ -98,7 +98,7 @@ impl UFixedDouble {
 
 impl core::convert::From<&UFixedDouble> for f64 {
     fn from(other: &UFixedDouble) -> Self {
-        other.buffer as f64 / (10u64.pow(other.point as u32) as f64)
+        other.buffer as f64 / (10u64.pow(u32::from(other.point)) as f64)
     }
 }
 
@@ -108,7 +108,7 @@ pub struct UFixedInteger(pub u64);
 
 impl UFixedInteger {
     pub fn parse(body: &str, length: usize) -> Result<UFixedInteger> {
-        let buffer = body.get(1..length + 1).ok_or(Error::InvalidFormat)?;
+        let buffer = body.get(1..=length).ok_or(Error::InvalidFormat)?;
         let number = u64::from_str_radix(buffer, 10).map_err(|_| Error::InvalidFormat)?;
 
         Ok(UFixedInteger(number))
