@@ -26,7 +26,7 @@ pub struct Readout {
 
 impl Readout {
     /// Parse the readout to an actual telegram message.
-    /// 
+    ///
     /// Checks the integrity of the telegram by the CRC16 checksum included.
     /// Parses the prefix and identification, and will allow the parsing of the COSEM objects.
     pub fn to_telegram<'a>(&'a self) -> Result<Telegram<'a>> {
@@ -115,28 +115,39 @@ mod tests {
                 OBIS::Version(v) => {
                     let b: std::vec::Vec<u8> = v.as_octets().map(|b| b.unwrap()).collect();
                     assert_eq!(b, [80]);
-                },
+                }
                 OBIS::DateTime(tst) => {
-                    assert_eq!(tst, crate::types::TST { year: 19, month: 3, day: 20, hour: 18, minute: 14, second: 3, dst: false });
-                },
+                    assert_eq!(
+                        tst,
+                        crate::types::TST {
+                            year: 19,
+                            month: 3,
+                            day: 20,
+                            hour: 18,
+                            minute: 14,
+                            second: 3,
+                            dst: false
+                        }
+                    );
+                }
                 OBIS::EquipmentIdentifier(ei) => {
                     let b: std::vec::Vec<u8> = ei.as_octets().map(|b| b.unwrap()).collect();
                     assert_eq!(std::str::from_utf8(&b).unwrap(), "E0043007052870318");
-                },
+                }
                 OBIS::MeterReadingToTariff1(mr) => {
-                    assert_eq!(f64::from(&mr) , 576.239);
+                    assert_eq!(f64::from(&mr), 576.239);
                 }
                 OBIS::MeterReadingToTariff2(mr) => {
-                    assert_eq!(f64::from(&mr) , 465.162);
-                },
+                    assert_eq!(f64::from(&mr), 465.162);
+                }
                 OBIS::TariffIndicator(ti) => {
                     let b: std::vec::Vec<u8> = ti.as_octets().map(|b| b.unwrap()).collect();
                     assert_eq!(b, [0, 2]);
-                },
+                }
                 OBIS::PowerFailures(crate::types::UFixedInteger(pf)) => {
                     assert_eq!(pf, 9);
-                },
-                _ => () // Do not test the rest.
+                }
+                _ => (), // Do not test the rest.
             }
         });
     }

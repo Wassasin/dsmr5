@@ -7,9 +7,7 @@ pub struct Reader<T: core::iter::Iterator<Item = u8>> {
 
 impl<T: core::iter::Iterator<Item = u8>> Reader<T> {
     pub fn new(stream: T) -> Self {
-        Reader {
-            stream,
-        }
+        Reader { stream }
     }
 }
 
@@ -18,7 +16,7 @@ impl<T: core::iter::Iterator<Item = u8>> Iterator for Reader<T> {
 
     /// Generates Readout by blocking on the underlying byte iterator until
     /// a full Readout was passed.
-    /// 
+    ///
     /// Will ignore all bytes until the first Readout is spotted.
     fn next(&mut self) -> Option<Self::Item> {
         loop {
@@ -52,7 +50,7 @@ impl<T: core::iter::Iterator<Item = u8>> Iterator for Reader<T> {
                 for _ in 0..4 {
                     write(self.stream.next()?)?;
                 }
-                
+
                 return Some(Readout { buffer });
             }
         }

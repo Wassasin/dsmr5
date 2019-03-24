@@ -1,5 +1,5 @@
 //! COSEM data types such as timestamps or fixed point numbers as per section 6.4.
-//! 
+//!
 //! Guaranteed to either be parsed stack-compatible types or buffer references.
 
 use crate::{Error, Result};
@@ -28,11 +28,9 @@ impl<'a> OctetString<'a> {
 
     /// Yield this octet string as the underlying octets.
     pub fn as_octets(&'a self) -> impl core::iter::Iterator<Item = Result<u8>> + 'a {
-        (0..self.0.len()/2)
-            .map(move |i| 
-                u8::from_str_radix(&self.0[i*2..=i*2+1], 16)
-                    .map_err(|_| Error::InvalidFormat)
-            )
+        (0..self.0.len() / 2).map(move |i| {
+            u8::from_str_radix(&self.0[i * 2..=i * 2 + 1], 16).map_err(|_| Error::InvalidFormat)
+        })
     }
 }
 
@@ -92,7 +90,7 @@ impl UFixedDouble {
         let lower = u64::from_str_radix(&lower[1..], 10).map_err(|_| Error::InvalidFormat)?;
 
         Ok(UFixedDouble {
-            buffer: upper*10u64.pow(point as u32) + lower,
+            buffer: upper * 10u64.pow(point as u32) + lower,
             point,
         })
     }
