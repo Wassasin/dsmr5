@@ -1,8 +1,13 @@
 [package]
 name = "dsmr5"
+description = "A no-std Rust implementation of the DSMR5 standard"
 version = "0.1.0"
 authors = ["Wouter Geraedts <wouter@tweedegolf.com>"]
 edition = "2018"
+license = "MIT"
+repository = "https://github.com/wassasin/dsmr5"
+keywords = ["power", "meter", "dutch", "serial", "no_std"]
+categories = ["no-std", "parser-implementations"]
 
 [dependencies]
 crc16 = "0.4.0"
