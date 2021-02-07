@@ -22,7 +22,7 @@ pub type Result<T> = core::result::Result<T, Error>;
 
 /// A data readout message from the metering system as per section 6.2.
 pub struct Readout {
-    pub buffer: [u8; 1024], // Maximum size of a Readout
+    pub buffer: [u8; 2048], // Maximum size of a Readout
 }
 
 impl Readout {
@@ -93,7 +93,7 @@ extern crate std;
 mod tests {
     #[test]
     fn example() {
-        let mut buffer = [0u8; 1024];
+        let mut buffer = [0u8; 2048];
         let file = std::fs::read("test/telegram.txt").unwrap();
 
         let (left, _right) = buffer.split_at_mut(file.len());
