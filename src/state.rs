@@ -116,7 +116,7 @@ impl<'a> core::convert::From<&crate::Telegram<'a>> for crate::Result<State> {
 mod tests {
     #[test]
     fn example() {
-        let mut buffer = [0u8; 1024];
+        let mut buffer = [0u8; 2048];
         let file = std::fs::read("test/telegram.txt").unwrap();
 
         let (left, _right) = buffer.split_at_mut(file.len());

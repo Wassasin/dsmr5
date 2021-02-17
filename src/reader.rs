@@ -26,7 +26,7 @@ impl<T: core::iter::Iterator<Item = u8>> Iterator for Reader<T> {
             }
         }
 
-        let mut buffer = [0u8; 1024];
+        let mut buffer = [0u8; 2048];
         buffer[0] = b'/';
 
         let mut i = 1;
