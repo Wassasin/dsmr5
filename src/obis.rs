@@ -131,7 +131,7 @@ impl<'a> OBIS<'a> {
                 UFixedDouble::parse(body, 5, 3)?,
             )),
             "1-0:41.7.0" => Ok(OBIS::InstantaneousActivePowerPlus(
-                Line1,
+                Line2,
                 UFixedDouble::parse(body, 5, 3)?,
             )),
             "1-0:61.7.0" => Ok(OBIS::InstantaneousActivePowerPlus(
@@ -139,7 +139,7 @@ impl<'a> OBIS<'a> {
                 UFixedDouble::parse(body, 5, 3)?,
             )),
             "1-0:22.7.0" => Ok(OBIS::InstantaneousActivePowerNeg(
-                Line2,
+                Line1,
                 UFixedDouble::parse(body, 5, 3)?,
             )),
             "1-0:42.7.0" => Ok(OBIS::InstantaneousActivePowerNeg(
