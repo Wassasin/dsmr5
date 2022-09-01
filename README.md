@@ -1,9 +1,8 @@
 # DSMR5
-A no-std Rust implementation of the DSMR5 standard.
+A no-std Rust implementation of the DSMR5/4.2 P1 companion standard.
 
 ## Intended application
 In the first instance using an FTDI -> USB module the smart meter emits its status every second.
-Later I will be using a custom ARM embedded bord to transmit the status over Zigbee.
 
 ## How to use
 Plug an FTDI cable into your P1 port. Your RX line will probably need to be inverted. Most off-the-shelf P1 FTDI's already have this preconfigured.
@@ -22,4 +21,5 @@ for readout in reader {
 ```
 
 ## References
-* [P1 Companion Standard Dutch Smart Meter Requirements 5.0.2](https://www.netbeheernederland.nl/_upload/Files/Slimme_meter_15_a727fce1f1.pdf)
+* [P1 Companion Standard Dutch Smart Meter Requirements 5.0.2 (2016-02-26)](https://www.netbeheernederland.nl/_upload/Files/Slimme_meter_15_a727fce1f1.pdf)
+* [P1 Companion Standard Dutch Smart Meter Requirements 4.2.2 (2014-03-14)](https://www.netbeheernederland.nl/_upload/Files/Slimme_meter_15_32ffe3cc38.pdf)

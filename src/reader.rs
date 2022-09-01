@@ -63,9 +63,9 @@ mod tests {
     fn reader() {
         use std::io::Read;
 
-        let f1 = std::fs::File::open("test/telegram.txt").unwrap().bytes();
-        let f2 = std::fs::File::open("test/telegram.txt").unwrap().bytes();
-        let f3 = std::fs::File::open("test/telegram.txt").unwrap().bytes();
+        let f1 = std::fs::File::open("test/isk.txt").unwrap().bytes();
+        let f2 = std::fs::File::open("test/isk.txt").unwrap().bytes();
+        let f3 = std::fs::File::open("test/isk.txt").unwrap().bytes();
 
         let mut bytes = f1.chain(f2).chain(f3).map(|b| b.unwrap());
 

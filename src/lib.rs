@@ -30,7 +30,7 @@ impl Readout {
     ///
     /// Checks the integrity of the telegram by the CRC16 checksum included.
     /// Parses the prefix and identification, and will allow the parsing of the COSEM objects.
-    pub fn to_telegram<'a>(&'a self) -> Result<Telegram<'a>> {
+    pub fn to_telegram(&'_ self) -> Result<Telegram<'_>> {
         let buffer = core::str::from_utf8(&self.buffer).map_err(|_| Error::InvalidFormat)?;
 
         if buffer.len() < 16 {
@@ -92,9 +92,9 @@ extern crate std;
 #[cfg(test)]
 mod tests {
     #[test]
-    fn example() {
+    fn example_isk() {
         let mut buffer = [0u8; 2048];
-        let file = std::fs::read("test/telegram.txt").unwrap();
+        let file = std::fs::read("test/isk.txt").unwrap();
 
         let (left, _right) = buffer.split_at_mut(file.len());
         left.copy_from_slice(file.as_slice());
@@ -146,6 +146,67 @@ mod tests {
                 }
                 PowerFailures(crate::types::UFixedInteger(pf)) => {
                     assert_eq!(pf, 9);
+                }
+                _ => (), // Do not test the rest.
+            }
+        });
+    }
+
+    #[test]
+    fn example_kaifa() {
+        let mut buffer = [0u8; 2048];
+        let file = std::fs::read("test/kaifa.txt").unwrap();
+
+        let (left, _right) = buffer.split_at_mut(file.len());
+        left.copy_from_slice(file.as_slice());
+
+        let readout = crate::Readout { buffer };
+        let telegram = readout.to_telegram().unwrap();
+
+        assert_eq!(telegram.prefix, "KFM");
+        assert_eq!(telegram.identification, "KAIFA-METER");
+
+        telegram.objects().for_each(|o| {
+            println!("{:?}", o); // to see use `$ cargo test -- --nocapture`
+            let o = o.unwrap();
+
+            use crate::OBIS::*;
+            use core::convert::From;
+            match o {
+                Version(v) => {
+                    let b: std::vec::Vec<u8> = v.as_octets().map(|b| b.unwrap()).collect();
+                    assert_eq!(b, [66]);
+                }
+                DateTime(tst) => {
+                    assert_eq!(
+                        tst,
+                        crate::types::TST {
+                            year: 22,
+                            month: 9,
+                            day: 1,
+                            hour: 15,
+                            minute: 22,
+                            second: 1,
+                            dst: true
+                        }
+                    );
+                }
+                EquipmentIdentifier(ei) => {
+                    let b: std::vec::Vec<u8> = ei.as_octets().map(|b| b.unwrap()).collect();
+                    assert_eq!(std::str::from_utf8(&b).unwrap(), "E0026000024153615");
+                }
+                MeterReadingTo(crate::Tariff::Tariff1, mr) => {
+                    assert_eq!(f64::from(&mr), 6285.065);
+                }
+                MeterReadingTo(crate::Tariff::Tariff2, mr) => {
+                    assert_eq!(f64::from(&mr), 6758.327);
+                }
+                TariffIndicator(ti) => {
+                    let b: std::vec::Vec<u8> = ti.as_octets().map(|b| b.unwrap()).collect();
+                    assert_eq!(b, [0, 2]);
+                }
+                PowerFailures(crate::types::UFixedInteger(pf)) => {
+                    assert_eq!(pf, 3);
                 }
                 _ => (), // Do not test the rest.
             }

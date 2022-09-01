@@ -4,18 +4,19 @@
 //! When only needing a few or single record, it is more efficient to directly filter on the
 //! telegram objects iterator.
 
-use crate::obis::*;
-use crate::types::*;
+use serde::{Deserialize, Serialize};
+
+use crate::{obis::*, types::*};
 
 /// A reading from a power meter, per Tariff.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct MeterReading {
     pub to: Option<f64>,
     pub by: Option<f64>,
 }
 
 /// One of three possible lines in the meter.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Line {
     pub voltage_sags: Option<u64>,
     pub voltage_swells: Option<u64>,
@@ -28,14 +29,14 @@ pub struct Line {
 /// One of 4 possible slaves to the meter.
 ///
 /// Such as a gas meter, water meter or heat supply.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Slave {
     pub device_type: Option<u64>,
     pub meter_reading: Option<(TST, f64)>,
 }
 
 /// The metering state surmised for a single Telegram.
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 pub struct State {
     pub datetime: Option<TST>,
     pub meterreadings: [MeterReading; 2],
@@ -117,7 +118,7 @@ mod tests {
     #[test]
     fn example() {
         let mut buffer = [0u8; 2048];
-        let file = std::fs::read("test/telegram.txt").unwrap();
+        let file = std::fs::read("test/isk.txt").unwrap();
 
         let (left, _right) = buffer.split_at_mut(file.len());
         left.copy_from_slice(file.as_slice());

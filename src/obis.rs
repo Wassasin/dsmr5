@@ -46,6 +46,7 @@ pub enum OBIS<'a> {
     LongPowerFailures(UFixedInteger),
     PowerFailureEventLog, // TODO
     TextMessage,          // TODO
+    TextMessageCode,      // TODO
     VoltageSags(Line, UFixedInteger),
     VoltageSwells(Line, UFixedInteger),
     InstantaneousVoltage(Line, UFixedDouble),
@@ -99,19 +100,8 @@ impl<'a> OBIS<'a> {
             "1-0:32.36.0" => Ok(OBIS::VoltageSwells(Line1, UFixedInteger::parse(body, 5)?)),
             "1-0:52.36.0" => Ok(OBIS::VoltageSwells(Line2, UFixedInteger::parse(body, 5)?)),
             "1-0:72.36.0" => Ok(OBIS::VoltageSwells(Line3, UFixedInteger::parse(body, 5)?)),
-            "0-0:96.13.0" => Ok(OBIS::TextMessage), // TODO
-            "1-0:32.7.0" => Ok(OBIS::InstantaneousVoltage(
-                Line1,
-                UFixedDouble::parse(body, 4, 1)?,
-            )),
-            "1-0:52.7.0" => Ok(OBIS::InstantaneousVoltage(
-                Line2,
-                UFixedDouble::parse(body, 4, 1)?,
-            )),
-            "1-0:72.7.0" => Ok(OBIS::InstantaneousVoltage(
-                Line3,
-                UFixedDouble::parse(body, 4, 1)?,
-            )),
+            "0-0:96.13.1" => Ok(OBIS::TextMessageCode), // TODO
+            "0-0:96.13.0" => Ok(OBIS::TextMessage),     // TODO
             "1-0:31.7.0" => Ok(OBIS::InstantaneousCurrent(
                 Line1,
                 UFixedInteger::parse(body, 3)?,
@@ -123,6 +113,18 @@ impl<'a> OBIS<'a> {
             "1-0:71.7.0" => Ok(OBIS::InstantaneousCurrent(
                 Line3,
                 UFixedInteger::parse(body, 3)?,
+            )),
+            "1-0:32.7.0" => Ok(OBIS::InstantaneousVoltage(
+                Line1,
+                UFixedDouble::parse(body, 4, 1)?,
+            )),
+            "1-0:52.7.0" => Ok(OBIS::InstantaneousVoltage(
+                Line2,
+                UFixedDouble::parse(body, 4, 1)?,
+            )),
+            "1-0:72.7.0" => Ok(OBIS::InstantaneousVoltage(
+                Line3,
+                UFixedDouble::parse(body, 4, 1)?,
             )),
             "1-0:21.7.0" => Ok(OBIS::InstantaneousActivePowerPlus(
                 Line1,
@@ -154,8 +156,9 @@ impl<'a> OBIS<'a> {
                     return Err(Error::UnknownObis);
                 }
 
-                let channel =
-                    u8::from_str_radix(&reference[2..=2], 10).map_err(|_| Error::InvalidFormat)?;
+                let channel = (&reference[2..=2])
+                    .parse::<u8>()
+                    .map_err(|_| Error::InvalidFormat)?;
 
                 use Slave::*;
                 let channel = match channel {

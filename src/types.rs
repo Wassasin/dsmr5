@@ -2,10 +2,12 @@
 //!
 //! Guaranteed to either be parsed stack-compatible types or buffer references.
 
+use serde::{Deserialize, Serialize};
+
 use crate::{Error, Result};
 
 /// Octet strings as defined by tag 9.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct OctetString<'a>(&'a str);
 
 impl<'a> OctetString<'a> {
@@ -35,7 +37,7 @@ impl<'a> OctetString<'a> {
 }
 
 /// Timestamps.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
 pub struct TST {
     pub year: u8,
     pub month: u8,
@@ -54,8 +56,11 @@ impl TST {
             return Err(Error::InvalidFormat);
         }
 
-        let parsetwo =
-            |i| u8::from_str_radix(&body[i..=(i + 1)], 10).map_err(|_| Error::InvalidFormat);
+        let parsetwo = |i| {
+            (&body[i..=(i + 1)])
+                .parse()
+                .map_err(|_| Error::InvalidFormat)
+        };
 
         Ok(TST {
             year: parsetwo(1)?,
@@ -74,7 +79,7 @@ impl TST {
 }
 
 /// Fixed length unsigned doubles as defined by tag 6.
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct UFixedDouble {
     buffer: u64,
     point: u8,
@@ -86,8 +91,8 @@ impl UFixedDouble {
         let buffer = body.get(1..length + 2).ok_or(Error::InvalidFormat)?;
         let (upper, lower) = buffer.split_at(length - point as usize);
 
-        let upper = u64::from_str_radix(upper, 10).map_err(|_| Error::InvalidFormat)?;
-        let lower = u64::from_str_radix(&lower[1..], 10).map_err(|_| Error::InvalidFormat)?;
+        let upper: u64 = upper.parse().map_err(|_| Error::InvalidFormat)?;
+        let lower: u64 = (&lower[1..]).parse().map_err(|_| Error::InvalidFormat)?;
 
         Ok(UFixedDouble {
             buffer: upper * 10u64.pow(u32::from(point)) + lower,
@@ -109,7 +114,7 @@ pub struct UFixedInteger(pub u64);
 impl UFixedInteger {
     pub fn parse(body: &str, length: usize) -> Result<UFixedInteger> {
         let buffer = body.get(1..=length).ok_or(Error::InvalidFormat)?;
-        let number = u64::from_str_radix(buffer, 10).map_err(|_| Error::InvalidFormat)?;
+        let number = buffer.parse().map_err(|_| Error::InvalidFormat)?;
 
         Ok(UFixedInteger(number))
     }
