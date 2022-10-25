@@ -37,7 +37,7 @@ impl<'a> OctetString<'a> {
 }
 
 /// Timestamps.
-#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TST {
     pub year: u8,
     pub month: u8,
@@ -57,7 +57,7 @@ impl TST {
         }
 
         let parsetwo = |i| {
-            (&body[i..=(i + 1)])
+            body[i..=(i + 1)]
                 .parse()
                 .map_err(|_| Error::InvalidFormat)
         };
@@ -92,7 +92,7 @@ impl UFixedDouble {
         let (upper, lower) = buffer.split_at(length - point as usize);
 
         let upper: u64 = upper.parse().map_err(|_| Error::InvalidFormat)?;
-        let lower: u64 = (&lower[1..]).parse().map_err(|_| Error::InvalidFormat)?;
+        let lower: u64 = lower[1..].parse().map_err(|_| Error::InvalidFormat)?;
 
         Ok(UFixedDouble {
             buffer: upper * 10u64.pow(u32::from(point)) + lower,

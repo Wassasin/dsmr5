@@ -156,7 +156,7 @@ impl<'a> OBIS<'a> {
                     return Err(Error::UnknownObis);
                 }
 
-                let channel = (&reference[2..=2])
+                let channel = reference[2..=2]
                     .parse::<u8>()
                     .map_err(|_| Error::InvalidFormat)?;
 
