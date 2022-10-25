@@ -11,4 +11,4 @@ categories = ["no-std", "parser-implementations"]
 
 [dependencies]
 crc16 = "0.4.0"
-serde = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive"], default-features = false }
