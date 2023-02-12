@@ -50,12 +50,32 @@ pub enum OBIS<'a> {
     VoltageSags(Line, UFixedInteger),
     VoltageSwells(Line, UFixedInteger),
     InstantaneousVoltage(Line, UFixedDouble),
+    #[cfg(not(feature = "emucs"))]
     InstantaneousCurrent(Line, UFixedInteger),
+    #[cfg(feature = "emucs")]
+    InstantaneousCurrent(Line, UFixedDouble),
     InstantaneousActivePowerPlus(Line, UFixedDouble),
     InstantaneousActivePowerNeg(Line, UFixedDouble),
     SlaveDeviceType(Slave, UFixedInteger),
     SlaveEquipmentIdentifier(Slave, OctetString<'a>),
     SlaveMeterReading(Slave, TST, UFixedDouble),
+    #[cfg(feature = "emucs")]
+    /// A reading that is not temperature corrected
+    SlaveMeterReadingNonCorrected(Slave, TST, UFixedDouble),
+    #[cfg(feature = "emucs")]
+    SlaveValveState(Slave, UFixedInteger),
+    #[cfg(feature = "emucs")]
+    BreakerState(UFixedInteger),
+    #[cfg(feature = "emucs")]
+    LimiterThreshold(UFixedDouble),
+    #[cfg(feature = "emucs")]
+    FuseSupervisionThreshold(UFixedInteger),
+    #[cfg(feature = "emucs")]
+    CurrentAverageDemand(UFixedDouble),
+    #[cfg(feature = "emucs")]
+    MaximumDemandMonth(TST, UFixedDouble),
+    #[cfg(feature = "emucs")]
+    MaximumDemandYear, // TODO
 }
 
 impl<'a> OBIS<'a> {
@@ -67,7 +87,10 @@ impl<'a> OBIS<'a> {
         use Tariff::*;
 
         match reference {
+            #[cfg(not(feature = "emucs"))]
             "1-3:0.2.8" => Ok(OBIS::Version::<'a>(OctetString::parse(body, 2)?)),
+            #[cfg(feature = "emucs")]
+            "0-0:96.1.4" => Ok(OBIS::Version::<'a>(OctetString::parse(body, 5)?)),
             "0-0:1.0.0" => Ok(OBIS::DateTime(TST::parse(body)?)),
             "0-0:96.1.1" => Ok(OBIS::EquipmentIdentifier::<'a>(OctetString::parse_max(
                 body, 96,
@@ -104,15 +127,24 @@ impl<'a> OBIS<'a> {
             "0-0:96.13.0" => Ok(OBIS::TextMessage),     // TODO
             "1-0:31.7.0" => Ok(OBIS::InstantaneousCurrent(
                 Line1,
+                #[cfg(not(feature = "emucs"))]
                 UFixedInteger::parse(body, 3)?,
+                #[cfg(feature = "emucs")]
+                UFixedDouble::parse(body, 5, 2)?,
             )),
             "1-0:51.7.0" => Ok(OBIS::InstantaneousCurrent(
                 Line2,
+                #[cfg(not(feature = "emucs"))]
                 UFixedInteger::parse(body, 3)?,
+                #[cfg(feature = "emucs")]
+                UFixedDouble::parse(body, 5, 2)?,
             )),
             "1-0:71.7.0" => Ok(OBIS::InstantaneousCurrent(
                 Line3,
+                #[cfg(not(feature = "emucs"))]
                 UFixedInteger::parse(body, 3)?,
+                #[cfg(feature = "emucs")]
+                UFixedDouble::parse(body, 5, 2)?,
             )),
             "1-0:32.7.0" => Ok(OBIS::InstantaneousVoltage(
                 Line1,
@@ -150,6 +182,28 @@ impl<'a> OBIS<'a> {
                 Line3,
                 UFixedDouble::parse(body, 5, 3)?,
             )),
+            #[cfg(feature = "emucs")]
+            "0-0:96.3.10" => Ok(OBIS::BreakerState(UFixedInteger::parse(body, 1)?)),
+            #[cfg(feature = "emucs")]
+            "0-0:17.0.0" => Ok(OBIS::LimiterThreshold(UFixedDouble::parse(body, 4, 1)?)),
+            #[cfg(feature = "emucs")]
+            "1-0:31.4.0" => Ok(OBIS::FuseSupervisionThreshold(UFixedInteger::parse(
+                body, 3,
+            )?)),
+            #[cfg(feature = "emucs")]
+            "1-0:1.4.0" => Ok(OBIS::CurrentAverageDemand(UFixedDouble::parse(body, 5, 3)?)),
+            #[cfg(feature = "emucs")]
+            "1-0:1.6.0" => {
+                let end = body[1..].find('(').ok_or(Error::InvalidFormat)?;
+                let (time, measurement) = body.split_at(end + 1);
+
+                Ok(OBIS::MaximumDemandMonth(
+                    TST::parse(time)?,
+                    UFixedDouble::parse(measurement, 5, 3)?,
+                ))
+            }
+            #[cfg(feature = "emucs")]
+            "0-0:98.1.0" => Ok(OBIS::MaximumDemandYear),
             _ => {
                 if reference.len() != 10 || reference.get(..2).ok_or(Error::InvalidFormat)? != "0-"
                 {
@@ -186,6 +240,29 @@ impl<'a> OBIS<'a> {
                         let period = measurement.find('.').ok_or(Error::InvalidFormat)?;
 
                         Ok(OBIS::SlaveMeterReading(
+                            channel,
+                            TST::parse(time)?,
+                            UFixedDouble::parse(measurement, 8, 9 - period as u8)?,
+                        ))
+                    }
+                    #[cfg(feature = "emucs")]
+                    "96.1.1" => Ok(OBIS::SlaveEquipmentIdentifier::<'a>(
+                        channel,
+                        OctetString::parse_max(body, 96)?,
+                    )),
+                    #[cfg(feature = "emucs")]
+                    "24.4.0" => Ok(OBIS::SlaveValveState(
+                        channel,
+                        UFixedInteger::parse(body, 1)?,
+                    )),
+                    #[cfg(feature = "emucs")]
+                    "24.2.3" => {
+                        let end = body[1..].find('(').ok_or(Error::InvalidFormat)?;
+                        let (time, measurement) = body.split_at(end + 1);
+
+                        let period = measurement.find('.').ok_or(Error::InvalidFormat)?;
+
+                        Ok(OBIS::SlaveMeterReadingNonCorrected(
                             channel,
                             TST::parse(time)?,
                             UFixedDouble::parse(measurement, 8, 9 - period as u8)?,
