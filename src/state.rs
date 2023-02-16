@@ -21,7 +21,10 @@ pub struct Line {
     pub voltage_sags: Option<u64>,
     pub voltage_swells: Option<u64>,
     pub voltage: Option<f64>,
+    #[cfg(not(feature = "emucs"))]
     pub current: Option<u64>,
+    #[cfg(feature = "emucs")]
+    pub current: Option<f64>,
     pub active_power_plus: Option<f64>,
     pub active_power_neg: Option<f64>,
 }
@@ -33,6 +36,8 @@ pub struct Line {
 pub struct Slave {
     pub device_type: Option<u64>,
     pub meter_reading: Option<(TST, f64)>,
+    #[cfg(feature = "emucs")]
+    pub valve_state: Option<u64>,
 }
 
 /// The metering state surmised for a single Telegram.
@@ -45,6 +50,12 @@ pub struct State {
     pub power_received: Option<f64>,
     pub power_failures: Option<u64>,
     pub long_power_failures: Option<u64>,
+    #[cfg(feature = "emucs")]
+    pub breaker_state: Option<u64>,
+    #[cfg(feature = "emucs")]
+    pub limiter_threshold: Option<f64>,
+    #[cfg(feature = "emucs")]
+    pub fuse_supervision_threshold: Option<u64>,
     pub lines: [Line; 3],
     pub slaves: [Slave; 4],
 }
@@ -82,6 +93,18 @@ impl<'a> core::convert::From<&crate::Telegram<'a>> for crate::Result<State> {
                 OBIS::LongPowerFailures(UFixedInteger(lpf)) => {
                     state.long_power_failures = Some(lpf);
                 }
+                #[cfg(feature = "emucs")]
+                OBIS::BreakerState(UFixedInteger(b)) => {
+                    state.breaker_state = Some(b);
+                }
+                #[cfg(feature = "emucs")]
+                OBIS::LimiterThreshold(l) => {
+                    state.limiter_threshold = Some(f64::from(&l));
+                }
+                #[cfg(feature = "emucs")]
+                OBIS::FuseSupervisionThreshold(UFixedInteger(f)) => {
+                    state.fuse_supervision_threshold = Some(f);
+                }
                 OBIS::VoltageSags(l, UFixedInteger(n)) => {
                     state.lines[l as usize].voltage_sags = Some(n);
                 }
@@ -91,8 +114,13 @@ impl<'a> core::convert::From<&crate::Telegram<'a>> for crate::Result<State> {
                 OBIS::InstantaneousVoltage(l, v) => {
                     state.lines[l as usize].voltage = Some(f64::from(&v));
                 }
+                #[cfg(not(feature = "emucs"))]
                 OBIS::InstantaneousCurrent(l, UFixedInteger(a)) => {
                     state.lines[l as usize].current = Some(a);
+                }
+                #[cfg(feature = "emucs")]
+                OBIS::InstantaneousCurrent(l, c) => {
+                    state.lines[l as usize].current = Some(f64::from(&c));
                 }
                 OBIS::InstantaneousActivePowerPlus(l, p) => {
                     state.lines[l as usize].active_power_plus = Some(f64::from(&p));
@@ -105,6 +133,10 @@ impl<'a> core::convert::From<&crate::Telegram<'a>> for crate::Result<State> {
                 }
                 OBIS::SlaveMeterReading(s, tst, mr) => {
                     state.slaves[s as usize].meter_reading = Some((tst, f64::from(&mr)));
+                }
+                #[cfg(feature = "emucs")]
+                OBIS::SlaveValveState(s, UFixedInteger(v)) => {
+                    state.slaves[s as usize].valve_state = Some(v);
                 }
                 _ => {} // Ignore rest.
             }
