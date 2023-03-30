@@ -1,17 +1,18 @@
 pub mod dsmr4;
+pub mod dsmr5;
 pub mod e_mucs;
 
 use crate::{Error, Result};
 
 /// One of two tariffs used by the meter.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Tariff {
     Tariff1 = 0,
     Tariff2 = 1,
 }
 
 /// One of up to three powerlines connected to the meter.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Line {
     Line1 = 0,
     Line2 = 1,
@@ -19,7 +20,7 @@ pub enum Line {
 }
 
 /// On of up to four slave meters connected to the meter.
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Slave {
     Slave1 = 0,
     Slave2 = 1,
@@ -36,4 +37,9 @@ pub trait Parseable<'a>: Sized {
 
         Self::parse(reference, body)
     }
+}
+
+pub trait Message {
+    fn line(&self) -> Option<Line>;
+    fn slave(&self) -> Option<Slave>;
 }

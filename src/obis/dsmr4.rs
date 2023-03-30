@@ -1,5 +1,5 @@
 use crate::{
-    obis::{Line, Parseable, Slave, Tariff},
+    obis::{Line, Message, Parseable, Slave, Tariff},
     types::*,
     Error, Result,
 };
@@ -28,7 +28,6 @@ pub enum OBIS<'a> {
     TextMessageCode,      // TODO
     VoltageSags(Line, UFixedInteger),
     VoltageSwells(Line, UFixedInteger),
-    InstantaneousVoltage(Line, UFixedDouble),
     InstantaneousCurrent(Line, UFixedInteger),
     InstantaneousActivePowerPlus(Line, UFixedDouble),
     InstantaneousActivePowerNeg(Line, UFixedDouble),
@@ -88,18 +87,6 @@ impl<'a> Parseable<'a> for OBIS<'a> {
                 Line3,
                 UFixedInteger::parse(body, 3)?,
             )),
-            "1-0:32.7.0" => Ok(Self::InstantaneousVoltage(
-                Line1,
-                UFixedDouble::parse(body, 4, 1)?,
-            )),
-            "1-0:52.7.0" => Ok(Self::InstantaneousVoltage(
-                Line2,
-                UFixedDouble::parse(body, 4, 1)?,
-            )),
-            "1-0:72.7.0" => Ok(Self::InstantaneousVoltage(
-                Line3,
-                UFixedDouble::parse(body, 4, 1)?,
-            )),
             "1-0:21.7.0" => Ok(Self::InstantaneousActivePowerPlus(
                 Line1,
                 UFixedDouble::parse(body, 5, 3)?,
@@ -125,14 +112,13 @@ impl<'a> Parseable<'a> for OBIS<'a> {
                 UFixedDouble::parse(body, 5, 3)?,
             )),
             _ => {
-                if reference.len() != 10 || reference.get(..2).ok_or(Error::InvalidFormat)? != "0-"
-                {
+                if reference.len() != 10 || reference.get(..2).ok_or(Error::UnknownObis)? != "0-" {
                     return Err(Error::UnknownObis);
                 }
 
                 let channel = reference[2..=2]
                     .parse::<u8>()
-                    .map_err(|_| Error::InvalidFormat)?;
+                    .map_err(|_| Error::UnknownObis)?;
 
                 use Slave::*;
                 let channel = match channel {
@@ -140,7 +126,7 @@ impl<'a> Parseable<'a> for OBIS<'a> {
                     2 => Ok(Slave2),
                     3 => Ok(Slave3),
                     4 => Ok(Slave4),
-                    _ => Err(Error::InvalidFormat),
+                    _ => Err(Error::UnknownObis),
                 }?;
                 let subreference = &reference[4..];
 
@@ -169,5 +155,97 @@ impl<'a> Parseable<'a> for OBIS<'a> {
                 }
             }
         }
+    }
+}
+
+impl<'a> Message for OBIS<'a> {
+    fn line(&self) -> Option<Line> {
+        use OBIS::*;
+        Some(*match self {
+            VoltageSags(l, _) => l,
+            VoltageSwells(l, _) => l,
+            InstantaneousCurrent(l, _) => l,
+            InstantaneousActivePowerPlus(l, _) => l,
+            InstantaneousActivePowerNeg(l, _) => l,
+            _ => return None,
+        })
+    }
+
+    fn slave(&self) -> Option<Slave> {
+        use OBIS::*;
+        Some(*match self {
+            SlaveDeviceType(s, _) => s,
+            SlaveEquipmentIdentifier(s, _) => s,
+            SlaveMeterReading(s, _, _) => s,
+            _ => return None,
+        })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::obis::Tariff;
+
+    #[test]
+    fn example_kaifa() {
+        let mut buffer = [0u8; 2048];
+        let file = std::fs::read("test/kaifa.txt").unwrap();
+
+        let (left, _right) = buffer.split_at_mut(file.len());
+        left.copy_from_slice(file.as_slice());
+
+        let readout = crate::Readout { buffer };
+        let telegram = readout.to_telegram().unwrap();
+
+        assert_eq!(telegram.prefix, "KFM");
+        assert_eq!(telegram.identification, "KAIFA-METER");
+
+        telegram
+            .objects::<crate::obis::dsmr4::OBIS>()
+            .for_each(|o| {
+                println!("{:?}", o); // to see use `$ cargo test -- --nocapture`
+                let o = o.unwrap();
+
+                use crate::obis::dsmr4::OBIS::*;
+                use core::convert::From;
+                match o {
+                    Version(v) => {
+                        let b: std::vec::Vec<u8> = v.as_octets().map(|b| b.unwrap()).collect();
+                        assert_eq!(b, [66]);
+                    }
+                    DateTime(tst) => {
+                        assert_eq!(
+                            tst,
+                            crate::types::TST {
+                                year: 22,
+                                month: 9,
+                                day: 1,
+                                hour: 15,
+                                minute: 22,
+                                second: 1,
+                                dst: true
+                            }
+                        );
+                    }
+                    EquipmentIdentifier(ei) => {
+                        let b: std::vec::Vec<u8> = ei.as_octets().map(|b| b.unwrap()).collect();
+                        assert_eq!(std::str::from_utf8(&b).unwrap(), "E0026000024153615");
+                    }
+                    MeterReadingTo(Tariff::Tariff1, mr) => {
+                        assert_eq!(f64::from(&mr), 6285.065);
+                    }
+                    MeterReadingTo(Tariff::Tariff2, mr) => {
+                        assert_eq!(f64::from(&mr), 6758.327);
+                    }
+                    TariffIndicator(ti) => {
+                        let b: std::vec::Vec<u8> = ti.as_octets().map(|b| b.unwrap()).collect();
+                        assert_eq!(b, [0, 2]);
+                    }
+                    PowerFailures(crate::types::UFixedInteger(pf)) => {
+                        assert_eq!(pf, 3);
+                    }
+                    _ => (), // Do not test the rest.
+                }
+            });
     }
 }

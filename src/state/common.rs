@@ -1,32 +1,12 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{obis::dsmr4::*, types::*, Result};
+use crate::{obis::dsmr4::*, types::*, Error, Result};
 
 /// A reading from a power meter, per Tariff.
 #[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
 pub struct MeterReading {
     pub to: Option<f64>,
     pub by: Option<f64>,
-}
-
-/// One of three possible lines in the meter.
-#[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Line {
-    pub voltage_sags: Option<u64>,
-    pub voltage_swells: Option<u64>,
-    pub voltage: Option<f64>,
-    pub active_power_plus: Option<f64>,
-    pub active_power_neg: Option<f64>,
-    pub current: Option<u64>,
-}
-
-/// One of 4 possible slaves to the meter.
-///
-/// Such as a gas meter, water meter or heat supply.
-#[derive(Default, Debug, Serialize, Deserialize, PartialEq)]
-pub struct Slave {
-    pub device_type: Option<u64>,
-    pub meter_reading: Option<(TST, f64)>,
 }
 
 /// The metering state surmised for a single Telegram.
@@ -74,7 +54,12 @@ impl State {
             LongPowerFailures(UFixedInteger(lpf)) => {
                 self.long_power_failures = Some(lpf);
             }
-            _ => {} // Ignore rest.
+            Version(_) => {}
+            EquipmentIdentifier(_) => {}
+            PowerFailureEventLog => {}
+            TextMessage => {}
+            TextMessageCode => {}
+            _ => return Err(Error::ObisForgotten), // Ignore rest.
         }
         Ok(())
     }

@@ -1,20 +1,39 @@
 use serde::{Deserialize, Serialize};
 
-use crate::{obis::e_mucs::*, state::common, types::*, Result};
+use crate::{
+    obis::{e_mucs::*, Message},
+    state::{common, dsmr5},
+    types::*,
+    Error, Result,
+};
 use core::ops::Deref;
 
 /// One of three possible lines in the meter.
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Line {
-    pub parent: common::Line,
+    pub parent: dsmr5::Line,
     pub current: Option<f64>,
 }
 
 impl Deref for Line {
-    type Target = common::Line;
+    type Target = dsmr5::Line;
 
     fn deref(&self) -> &Self::Target {
         &self.parent
+    }
+}
+
+impl Line {
+    pub fn apply(&mut self, o: OBIS) -> Result<()> {
+        use OBIS::*;
+        match o {
+            InstantaneousCurrent(_, c) => {
+                self.current = Some(f64::from(&c));
+            }
+            DSMR5(o) => self.parent.apply(o)?,
+            _ => return Err(Error::ObisForgotten),
+        }
+        Ok(())
     }
 }
 
@@ -23,15 +42,29 @@ impl Deref for Line {
 /// Such as a gas meter, water meter or heat supply.
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Slave {
-    pub parent: common::Slave,
+    pub parent: dsmr5::Slave,
     pub valve_state: Option<u64>,
 }
 
 impl Deref for Slave {
-    type Target = common::Slave;
+    type Target = dsmr5::Slave;
 
     fn deref(&self) -> &Self::Target {
         &self.parent
+    }
+}
+
+impl Slave {
+    pub fn apply(&mut self, o: OBIS) -> Result<()> {
+        use OBIS::*;
+        match o {
+            DSMR5(o) => self.parent.apply(o)?,
+            SlaveValveState(_, UFixedInteger(v)) => {
+                self.valve_state = Some(v);
+            }
+            _ => return Err(Error::ObisForgotten),
+        }
+        Ok(())
     }
 }
 
@@ -57,32 +90,33 @@ impl Deref for State {
 
 impl State {
     pub fn apply(&mut self, o: OBIS) -> Result<()> {
-        use OBIS::*;
-        match o {
-            DSMR4(o) => self.parent.apply(o)?,
-            InstantaneousCurrent(l, c) => {
-                self.lines[l as usize].current = Some(f64::from(&c));
+        if let Some(l) = o.line() {
+            self.lines[l as usize].apply(o)
+        } else if let Some(s) = o.slave() {
+            self.slaves[s as usize].apply(o)
+        } else {
+            use OBIS::*;
+            match o {
+                DSMR5(crate::obis::dsmr5::OBIS::DSMR4(o)) => return self.parent.apply(o),
+                SlaveMeterReadingNonCorrected(_, _, _) => {}
+                BreakerState(UFixedInteger(b)) => {
+                    self.breaker_state = Some(b);
+                }
+                LimiterThreshold(l) => {
+                    self.limiter_threshold = Some(f64::from(&l));
+                }
+                FuseSupervisionThreshold(UFixedInteger(f)) => {
+                    self.fuse_supervision_threshold = Some(f);
+                }
+                CurrentAverageDemand(f) => {
+                    self.average_demand = Some(f64::from(&f));
+                }
+                MaximumDemandMonth(_, _) => {}
+                MaximumDemandYear => {}
+                _ => return Err(Error::ObisForgotten),
             }
-            SlaveMeterReadingNonCorrected(_, _, _) => {}
-            SlaveValveState(s, UFixedInteger(v)) => {
-                self.slaves[s as usize].valve_state = Some(v);
-            }
-            BreakerState(UFixedInteger(b)) => {
-                self.breaker_state = Some(b);
-            }
-            LimiterThreshold(l) => {
-                self.limiter_threshold = Some(f64::from(&l));
-            }
-            FuseSupervisionThreshold(UFixedInteger(f)) => {
-                self.fuse_supervision_threshold = Some(f);
-            }
-            CurrentAverageDemand(f) => {
-                self.average_demand = Some(f64::from(&f));
-            }
-            MaximumDemandMonth(_, _) => {}
-            MaximumDemandYear => {}
-        };
-        Ok(())
+            Ok(())
+        }
     }
 }
 

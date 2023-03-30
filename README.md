@@ -1,5 +1,14 @@
 # DSMR5
-A no-std Rust implementation of the DSMR5/4.2 P1 companion standard.
+A no-std Rust implementation of the DSMR P1 companion standard.
+
+## Supported standards
+* Dutch DSMR 4.2
+* Dutch DSMR 5.0
+* Belgian e-MUCS 1.7
+
+## Tested smart meters
+* ISKRA AM550 (Liander, DSMR 5.0)
+* Kaifa MA304C (Liander, DSMR 4.2)
 
 ## Intended application
 In the first instance using an FTDI -> USB module the smart meter emits its status every second.
@@ -21,6 +30,6 @@ for readout in reader {
 ```
 
 ## References
-* [extended Multi-Utility Companion Specification for the Consumer Interface P1 1.7.1](https://maakjemeterslim.be/rails/active_storage/disk/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaDdDRG9JYTJWNVNTSWhlblJ4YW14cU5XdHRhalZsWkRWbmJIaDNNak4zYmpReGFUazRkd1k2QmtWVU9oQmthWE53YjNOcGRHbHZia2tpVjJsdWJHbHVaVHNnWm1sc1pXNWhiV1U5SW1VdFRWVkRVMTlRTVY5RlpGOHhYemRmTVM1d1pHWWlPeUJtYVd4bGJtRnRaU285VlZSR0xUZ25KMlV0VFZWRFUxOVFNVjlGWkY4eFh6ZGZNUzV3WkdZR093WlVPaEZqYjI1MFpXNTBYM1I1Y0dWSkloUmhjSEJzYVdOaGRHbHZiaTl3WkdZR093WlUiLCJleHAiOiIyMDIzLTAyLTI1VDEyOjM4OjA5LjQ5NFoiLCJwdXIiOiJibG9iX2tleSJ9fQ==--3ac24b08420084bc8036a9829c46b503f952a940/e-MUCS_P1_Ed_1_7_1.pdf?content_type=application%2Fpdf&disposition=inline%3B+filename%3D%22e-MUCS_P1_Ed_1_7_1.pdf%22%3B+filename%2A%3DUTF-8%27%27e-MUCS_P1_Ed_1_7_1.pdf)
+* [extended Multi-Utility Companion Specification for the Consumer Interface P1 1.7.1](https://maakjemeterslim.be/rails/active_storage/blobs/eyJfcmFpbHMiOnsibWVzc2FnZSI6IkJBaHBBZ0lEIiwiZXhwIjpudWxsLCJwdXIiOiJibG9iX2lkIn19--cdd9b48fd0838e89b177f03b745b23450fd8f53e/e-MUCS_P1_Ed_1_7_1.pdf?disposition=attachment)
 * [P1 Companion Standard Dutch Smart Meter Requirements 5.0.2 (2016-02-26)](https://www.netbeheernederland.nl/_upload/Files/Slimme_meter_15_a727fce1f1.pdf)
 * [P1 Companion Standard Dutch Smart Meter Requirements 4.2.2 (2014-03-14)](https://www.netbeheernederland.nl/_upload/Files/Slimme_meter_15_32ffe3cc38.pdf)
