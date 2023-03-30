@@ -109,9 +109,9 @@ impl<'a> OBIS<'a> {
 impl<'a> Parseable<'a> for OBIS<'a> {
     fn parse(reference: &'a str, body: &'a str) -> Result<Self> {
         match Self::parse_specific(reference, body) {
-            Ok(obis) => return Ok(obis),
+            Ok(obis) => Ok(obis),
             Err(Error::UnknownObis) => dsmr4::OBIS::<'a>::parse(reference, body).map(Self::DSMR4),
-            Err(e) => return Err(e),
+            Err(e) => Err(e),
         }
     }
 }

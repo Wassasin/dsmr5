@@ -1,7 +1,6 @@
 pub mod dsmr4;
 pub mod e_mucs;
 
-use crate::types::*;
 use crate::{Error, Result};
 
 /// One of two tariffs used by the meter.
