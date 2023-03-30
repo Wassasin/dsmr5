@@ -98,7 +98,7 @@ impl<'a> core::convert::From<&crate::Telegram<'a>> for crate::Result<State> {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn example() {
+    fn example_flu() {
         let mut buffer = [0u8; 2048];
         let file = std::fs::read("test/flu.txt").unwrap();
 
