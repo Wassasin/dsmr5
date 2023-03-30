@@ -6,7 +6,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::{obis::*, types::*};
+use crate::{
+    obis::{dsmr4::*, *},
+    types::*,
+};
 
 /// A reading from a power meter, per Tariff.
 #[derive(Default, Debug, Serialize, Deserialize)]

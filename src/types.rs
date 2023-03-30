@@ -56,11 +56,7 @@ impl TST {
             return Err(Error::InvalidFormat);
         }
 
-        let parsetwo = |i| {
-            body[i..=(i + 1)]
-                .parse()
-                .map_err(|_| Error::InvalidFormat)
-        };
+        let parsetwo = |i| body[i..=(i + 1)].parse().map_err(|_| Error::InvalidFormat);
 
         Ok(TST {
             year: parsetwo(1)?,

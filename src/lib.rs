@@ -80,8 +80,10 @@ pub struct Telegram<'a> {
 
 impl<'a> Telegram<'a> {
     /// Parse the COSEM objects, yielding them as part of an iterator.
-    pub fn objects(&self) -> impl core::iter::Iterator<Item = Result<OBIS<'a>>> {
-        self.object_buffer.lines().map(OBIS::parse)
+    pub fn objects<T: Parseable<'a> + 'a>(
+        &'a self,
+    ) -> impl core::iter::Iterator<Item = Result<T>> + 'a {
+        self.object_buffer.lines().map(T::parse_line)
     }
 }
 
@@ -105,51 +107,53 @@ mod tests {
         assert_eq!(telegram.prefix, "ISK");
         assert_eq!(telegram.identification, "\\2M550E-1012");
 
-        telegram.objects().for_each(|o| {
-            println!("{:?}", o); // to see use `$ cargo test -- --nocapture`
-            let o = o.unwrap();
+        telegram
+            .objects::<crate::obis::dsmr4::OBIS>()
+            .for_each(|o| {
+                println!("{:?}", o); // to see use `$ cargo test -- --nocapture`
+                let o = o.unwrap();
 
-            use crate::OBIS::*;
-            use core::convert::From;
-            match o {
-                Version(v) => {
-                    let b: std::vec::Vec<u8> = v.as_octets().map(|b| b.unwrap()).collect();
-                    assert_eq!(b, [80]);
+                use crate::obis::dsmr4::OBIS::*;
+                use core::convert::From;
+                match o {
+                    Version(v) => {
+                        let b: std::vec::Vec<u8> = v.as_octets().map(|b| b.unwrap()).collect();
+                        assert_eq!(b, [80]);
+                    }
+                    DateTime(tst) => {
+                        assert_eq!(
+                            tst,
+                            crate::types::TST {
+                                year: 19,
+                                month: 3,
+                                day: 20,
+                                hour: 18,
+                                minute: 14,
+                                second: 3,
+                                dst: false
+                            }
+                        );
+                    }
+                    EquipmentIdentifier(ei) => {
+                        let b: std::vec::Vec<u8> = ei.as_octets().map(|b| b.unwrap()).collect();
+                        assert_eq!(std::str::from_utf8(&b).unwrap(), "E0043007052870318");
+                    }
+                    MeterReadingTo(crate::Tariff::Tariff1, mr) => {
+                        assert_eq!(f64::from(&mr), 576.239);
+                    }
+                    MeterReadingTo(crate::Tariff::Tariff2, mr) => {
+                        assert_eq!(f64::from(&mr), 465.162);
+                    }
+                    TariffIndicator(ti) => {
+                        let b: std::vec::Vec<u8> = ti.as_octets().map(|b| b.unwrap()).collect();
+                        assert_eq!(b, [0, 2]);
+                    }
+                    PowerFailures(crate::types::UFixedInteger(pf)) => {
+                        assert_eq!(pf, 9);
+                    }
+                    _ => (), // Do not test the rest.
                 }
-                DateTime(tst) => {
-                    assert_eq!(
-                        tst,
-                        crate::types::TST {
-                            year: 19,
-                            month: 3,
-                            day: 20,
-                            hour: 18,
-                            minute: 14,
-                            second: 3,
-                            dst: false
-                        }
-                    );
-                }
-                EquipmentIdentifier(ei) => {
-                    let b: std::vec::Vec<u8> = ei.as_octets().map(|b| b.unwrap()).collect();
-                    assert_eq!(std::str::from_utf8(&b).unwrap(), "E0043007052870318");
-                }
-                MeterReadingTo(crate::Tariff::Tariff1, mr) => {
-                    assert_eq!(f64::from(&mr), 576.239);
-                }
-                MeterReadingTo(crate::Tariff::Tariff2, mr) => {
-                    assert_eq!(f64::from(&mr), 465.162);
-                }
-                TariffIndicator(ti) => {
-                    let b: std::vec::Vec<u8> = ti.as_octets().map(|b| b.unwrap()).collect();
-                    assert_eq!(b, [0, 2]);
-                }
-                PowerFailures(crate::types::UFixedInteger(pf)) => {
-                    assert_eq!(pf, 9);
-                }
-                _ => (), // Do not test the rest.
-            }
-        });
+            });
     }
 
     #[test]
@@ -166,50 +170,124 @@ mod tests {
         assert_eq!(telegram.prefix, "KFM");
         assert_eq!(telegram.identification, "KAIFA-METER");
 
-        telegram.objects().for_each(|o| {
-            println!("{:?}", o); // to see use `$ cargo test -- --nocapture`
-            let o = o.unwrap();
+        telegram
+            .objects::<crate::obis::dsmr4::OBIS>()
+            .for_each(|o| {
+                println!("{:?}", o); // to see use `$ cargo test -- --nocapture`
+                let o = o.unwrap();
 
-            use crate::OBIS::*;
-            use core::convert::From;
-            match o {
-                Version(v) => {
-                    let b: std::vec::Vec<u8> = v.as_octets().map(|b| b.unwrap()).collect();
-                    assert_eq!(b, [66]);
+                use crate::obis::dsmr4::OBIS::*;
+                use core::convert::From;
+                match o {
+                    Version(v) => {
+                        let b: std::vec::Vec<u8> = v.as_octets().map(|b| b.unwrap()).collect();
+                        assert_eq!(b, [66]);
+                    }
+                    DateTime(tst) => {
+                        assert_eq!(
+                            tst,
+                            crate::types::TST {
+                                year: 22,
+                                month: 9,
+                                day: 1,
+                                hour: 15,
+                                minute: 22,
+                                second: 1,
+                                dst: true
+                            }
+                        );
+                    }
+                    EquipmentIdentifier(ei) => {
+                        let b: std::vec::Vec<u8> = ei.as_octets().map(|b| b.unwrap()).collect();
+                        assert_eq!(std::str::from_utf8(&b).unwrap(), "E0026000024153615");
+                    }
+                    MeterReadingTo(crate::Tariff::Tariff1, mr) => {
+                        assert_eq!(f64::from(&mr), 6285.065);
+                    }
+                    MeterReadingTo(crate::Tariff::Tariff2, mr) => {
+                        assert_eq!(f64::from(&mr), 6758.327);
+                    }
+                    TariffIndicator(ti) => {
+                        let b: std::vec::Vec<u8> = ti.as_octets().map(|b| b.unwrap()).collect();
+                        assert_eq!(b, [0, 2]);
+                    }
+                    PowerFailures(crate::types::UFixedInteger(pf)) => {
+                        assert_eq!(pf, 3);
+                    }
+                    _ => (), // Do not test the rest.
                 }
-                DateTime(tst) => {
-                    assert_eq!(
-                        tst,
-                        crate::types::TST {
-                            year: 22,
-                            month: 9,
-                            day: 1,
-                            hour: 15,
-                            minute: 22,
-                            second: 1,
-                            dst: true
+            });
+    }
+
+    #[test]
+    fn example_flu() {
+        let mut buffer = [0u8; 2048];
+        let file = std::fs::read("test/flu.txt").unwrap();
+
+        let (left, _right) = buffer.split_at_mut(file.len());
+        left.copy_from_slice(file.as_slice());
+
+        let readout = crate::Readout { buffer };
+        let telegram = readout.to_telegram().unwrap();
+
+        assert_eq!(telegram.prefix, "FLU");
+        assert_eq!(telegram.identification, "\\253770234_A");
+
+        telegram
+            .objects::<crate::obis::e_mucs::OBIS>()
+            .for_each(|o| {
+                println!("{:?}", o); // to see use `$ cargo test -- --nocapture`
+                let o = o.unwrap();
+
+                use crate::obis::dsmr4::OBIS::*;
+                use crate::obis::e_mucs::OBIS::*;
+                use core::convert::From;
+                match o {
+                    DSMR4(o) => {
+                        match o {
+                            Version(v) => {
+                                let b: std::vec::Vec<u8> =
+                                    v.as_octets().map(|b| b.unwrap()).collect();
+                                assert_eq!(b, [80, 33]);
+                            }
+                            DateTime(tst) => {
+                                assert_eq!(
+                                    tst,
+                                    crate::types::TST {
+                                        year: 23,
+                                        month: 2,
+                                        day: 11,
+                                        hour: 11,
+                                        minute: 15,
+                                        second: 41,
+                                        dst: false
+                                    }
+                                );
+                            }
+                            EquipmentIdentifier(ei) => {
+                                let b: std::vec::Vec<u8> =
+                                    ei.as_octets().map(|b| b.unwrap()).collect();
+                                assert_eq!(std::str::from_utf8(&b).unwrap(), "1SAG1105067226");
+                            }
+                            MeterReadingTo(crate::Tariff::Tariff1, mr) => {
+                                assert_eq!(f64::from(&mr), 1114.057);
+                            }
+                            MeterReadingTo(crate::Tariff::Tariff2, mr) => {
+                                assert_eq!(f64::from(&mr), 997.282);
+                            }
+                            TariffIndicator(ti) => {
+                                let b: std::vec::Vec<u8> =
+                                    ti.as_octets().map(|b| b.unwrap()).collect();
+                                assert_eq!(b, [0, 2]);
+                            }
+                            PowerFailures(crate::types::UFixedInteger(pf)) => {
+                                assert_eq!(pf, 3);
+                            }
+                            _ => (), // Do not test the rest.
                         }
-                    );
+                    }
+                    _ => (), // Do not test the rest.
                 }
-                EquipmentIdentifier(ei) => {
-                    let b: std::vec::Vec<u8> = ei.as_octets().map(|b| b.unwrap()).collect();
-                    assert_eq!(std::str::from_utf8(&b).unwrap(), "E0026000024153615");
-                }
-                MeterReadingTo(crate::Tariff::Tariff1, mr) => {
-                    assert_eq!(f64::from(&mr), 6285.065);
-                }
-                MeterReadingTo(crate::Tariff::Tariff2, mr) => {
-                    assert_eq!(f64::from(&mr), 6758.327);
-                }
-                TariffIndicator(ti) => {
-                    let b: std::vec::Vec<u8> = ti.as_octets().map(|b| b.unwrap()).collect();
-                    assert_eq!(b, [0, 2]);
-                }
-                PowerFailures(crate::types::UFixedInteger(pf)) => {
-                    assert_eq!(pf, 3);
-                }
-                _ => (), // Do not test the rest.
-            }
-        });
+            });
     }
 }
