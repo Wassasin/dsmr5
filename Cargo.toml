@@ -1,7 +1,7 @@
 [package]
 name = "dsmr5"
 description = "A no-std Rust implementation of the DSMR5 standard"
-version = "0.2.2"
+version = "0.3.0"
 authors = ["Wouter Geraedts <wouter@tweedegolf.com>"]
 edition = "2021"
 license = "MIT"
