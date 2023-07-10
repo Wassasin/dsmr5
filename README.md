@@ -10,10 +10,10 @@ Then create your own little crate using something like the `serial` crate, and u
 
 ```
 let mut port = serial::open(&path).unwrap();
-let reader = dsmr5::Reader::new(port.bytes().map(|b| b.unwrap()));
+let reader = dsmr5::Reader::new(port.bytes());
 
 for readout in reader {
-    let telegram = readout.to_telegram().unwrap();
+    let telegram = readout.unwrap().to_telegram().unwrap();
     let state = dsmr5::Result::<dsmr5::state::State>::from(&telegram).unwrap();
 
     println!("{}", state.power_delivered.unwrap());
