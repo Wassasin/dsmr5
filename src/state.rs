@@ -49,8 +49,10 @@ pub struct State {
     pub slaves: [Slave; 4],
 }
 
-impl<'a> core::convert::From<&crate::Telegram<'a>> for crate::Result<State> {
-    fn from(t: &crate::Telegram<'a>) -> Self {
+impl<'a> core::convert::TryFrom<&crate::Telegram<'a>> for State {
+    type Error = crate::Error;
+
+    fn try_from(t: &crate::Telegram<'a>) -> Result<Self, Self::Error> {
         t.objects().try_fold(State::default(), |mut state, o| {
             match o? {
                 OBIS::DateTime(tst) => {
@@ -113,6 +115,12 @@ impl<'a> core::convert::From<&crate::Telegram<'a>> for crate::Result<State> {
     }
 }
 
+impl<'a> core::convert::From<&crate::Telegram<'a>> for crate::Result<State> {
+    fn from(t: &crate::Telegram<'a>) -> Self {
+        t.try_into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     #[test]
@@ -124,8 +132,8 @@ mod tests {
         left.copy_from_slice(file.as_slice());
 
         let readout = crate::Readout { buffer };
-        let telegram = readout.to_telegram().unwrap();
-        let state = crate::Result::<crate::state::State>::from(&telegram).unwrap();
+        let telegram = &readout.to_telegram().unwrap();
+        let state: super::State = telegram.try_into().unwrap();
 
         assert_eq!(
             state.datetime.as_ref().unwrap(),
