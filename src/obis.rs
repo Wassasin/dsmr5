@@ -53,9 +53,9 @@ pub enum OBIS<'a> {
     InstantaneousCurrent(Line, UFixedInteger),
     InstantaneousActivePowerPlus(Line, UFixedDouble),
     InstantaneousActivePowerNeg(Line, UFixedDouble),
-    SlaveDeviceType(Slave, UFixedInteger),
+    SlaveDeviceType(Slave, Option<UFixedInteger>),
     SlaveEquipmentIdentifier(Slave, OctetString<'a>),
-    SlaveMeterReading(Slave, TST, UFixedDouble),
+    SlaveMeterReading(Slave, TST, Option<UFixedDouble>),
 }
 
 impl<'a> OBIS<'a> {
@@ -171,10 +171,17 @@ impl<'a> OBIS<'a> {
                 let subreference = &reference[4..];
 
                 match subreference {
-                    "24.1.0" => Ok(OBIS::SlaveDeviceType(
-                        channel,
-                        UFixedInteger::parse(body, 3)?,
-                    )),
+                    "24.1.0" => {
+                        // handling the case where the Smart Meter sends an empty value
+                        if body.contains("()") {
+                            return Ok(OBIS::SlaveDeviceType(channel, None));
+                        } else {
+                            return Ok(OBIS::SlaveDeviceType(
+                                channel,
+                                Some(UFixedInteger::parse(body, 3)?),
+                            ));
+                        }
+                    }
                     "96.1.0" => Ok(OBIS::SlaveEquipmentIdentifier::<'a>(
                         channel,
                         OctetString::parse_max(body, 96)?,
@@ -185,11 +192,15 @@ impl<'a> OBIS<'a> {
 
                         let period = measurement.find('.').ok_or(Error::InvalidFormat)?;
 
-                        Ok(OBIS::SlaveMeterReading(
-                            channel,
-                            TST::parse(time)?,
-                            UFixedDouble::parse(measurement, 8, 9 - period as u8)?,
-                        ))
+                        if body.contains("(00000000.0000)") {
+                            return Ok(OBIS::SlaveMeterReading(channel, TST::parse(time)?, None));
+                        } else {
+                            Ok(OBIS::SlaveMeterReading(
+                                channel,
+                                TST::parse(time)?,
+                                Some(UFixedDouble::parse(measurement, 8, 9 - period as u8)?),
+                            ))
+                        }
                     }
                     _ => Err(Error::UnknownObis),
                 }

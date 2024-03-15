@@ -212,4 +212,39 @@ mod tests {
             }
         });
     }
+
+    #[test]
+    fn example_mcs() {
+        let mut buffer = [0u8; 2048];
+        let file = std::fs::read("test/mcs.txt").unwrap();
+
+        let (left, _right) = buffer.split_at_mut(file.len());
+        left.copy_from_slice(file.as_slice());
+
+        let readout = crate::Readout { buffer };
+        let telegram = readout.to_telegram().unwrap();
+
+        assert_eq!(telegram.prefix, "MCS");
+        assert_eq!(telegram.identification, "0000000000000");
+
+        telegram.objects().for_each(|o| {
+            //     println!("{:?}", o); // to see use `$ cargo test -- --nocapture`
+            let o = o.unwrap();
+
+            use crate::OBIS::*;
+            match o {
+                Version(v) => {
+                    let b: std::vec::Vec<u8> = v.as_octets().map(|b| b.unwrap()).collect();
+                    assert_eq!(b, [80]);
+                }
+                SlaveDeviceType(_slave, devide_type) => {
+                    assert_eq!(devide_type.is_none(), true);
+                }
+                SlaveMeterReading(_slave, _tst, value) => {
+                    assert_eq!(value.is_none(), true)
+                }
+                _ => (), // Do not test the rest.
+            }
+        });
+    }
 }
