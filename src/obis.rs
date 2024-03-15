@@ -55,7 +55,7 @@ pub enum OBIS<'a> {
     InstantaneousActivePowerNeg(Line, UFixedDouble),
     SlaveDeviceType(Slave, Option<UFixedInteger>),
     SlaveEquipmentIdentifier(Slave, OctetString<'a>),
-    SlaveMeterReading(Slave, Option<TST>, Option<UFixedDouble>),
+    SlaveMeterReading(Slave, TST, Option<UFixedDouble>),
 }
 
 impl<'a> OBIS<'a> {
@@ -193,15 +193,11 @@ impl<'a> OBIS<'a> {
                         let period = measurement.find('.').ok_or(Error::InvalidFormat)?;
 
                         if body.contains("(00000000.0000)") {
-                            return Ok(OBIS::SlaveMeterReading(
-                                channel,
-                                Some(TST::parse(time)?),
-                                None,
-                            ));
+                            return Ok(OBIS::SlaveMeterReading(channel, TST::parse(time)?, None));
                         } else {
                             Ok(OBIS::SlaveMeterReading(
                                 channel,
-                                Some(TST::parse(time)?),
+                                TST::parse(time)?,
                                 Some(UFixedDouble::parse(measurement, 8, 9 - period as u8)?),
                             ))
                         }

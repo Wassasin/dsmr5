@@ -110,13 +110,8 @@ impl<'a> core::convert::TryFrom<&crate::Telegram<'a>> for State {
                     }
                 }
                 OBIS::SlaveMeterReading(s, tst, mr) => {
-                    if let Some(tst_value) = tst {
-                        if let Some(mr_value) = mr {
-                            state.slaves[s as usize].meter_reading =
-                                Some((tst_value, f64::from(&mr_value)));
-                        } else {
-                            state.slaves[s as usize].meter_reading = None;
-                        }
+                    if let Some(mr_value) = mr {
+                        state.slaves[s as usize].meter_reading = Some((tst, f64::from(&mr_value)));
                     } else {
                         state.slaves[s as usize].meter_reading = None;
                     }
