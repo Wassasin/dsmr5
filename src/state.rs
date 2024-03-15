@@ -102,11 +102,24 @@ impl<'a> core::convert::TryFrom<&crate::Telegram<'a>> for State {
                 OBIS::InstantaneousActivePowerNeg(l, p) => {
                     state.lines[l as usize].active_power_neg = Some(f64::from(&p));
                 }
-                OBIS::SlaveDeviceType(s, UFixedInteger(dt)) => {
-                    state.slaves[s as usize].device_type = Some(dt);
+                OBIS::SlaveDeviceType(s, value_x) => {
+                    if let Some(UFixedInteger(dt)) = value_x {
+                        state.slaves[s as usize].device_type = Some(dt);
+                    } else {
+                        state.slaves[s as usize].device_type = None;
+                    }
                 }
                 OBIS::SlaveMeterReading(s, tst, mr) => {
-                    state.slaves[s as usize].meter_reading = Some((tst, f64::from(&mr)));
+                    if let Some(tst_value) = tst {
+                        if let Some(mr_value) = mr {
+                            state.slaves[s as usize].meter_reading =
+                                Some((tst_value, f64::from(&mr_value)));
+                        } else {
+                            state.slaves[s as usize].meter_reading = None;
+                        }
+                    } else {
+                        state.slaves[s as usize].meter_reading = None;
+                    }
                 }
                 _ => {} // Ignore rest.
             }
