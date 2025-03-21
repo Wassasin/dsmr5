@@ -247,4 +247,42 @@ mod tests {
             }
         });
     }
+
+    #[test]
+    fn example_t211() {
+        let mut buffer = [0u8; 2048];
+        let file = std::fs::read("test/t211.txt").unwrap();
+
+        let (left, _right) = buffer.split_at_mut(file.len());
+        left.copy_from_slice(file.as_slice());
+
+        let readout = crate::Readout { buffer };
+        let telegram = readout.to_telegram().unwrap();
+
+        assert_eq!(telegram.prefix, "Ene");
+        assert_eq!(telegram.identification, "\\T211 ESMR 5.0");
+
+        telegram.objects().for_each(|o| {
+            //     println!("{:?}", o); // to see use `$ cargo test -- --nocapture`
+            let o = o.unwrap();
+
+            use crate::OBIS::*;
+            match o {
+                Version(v) => {
+                    let b: std::vec::Vec<u8> = v.as_octets().map(|b| b.unwrap()).collect();
+                    assert_eq!(b, [80]);
+                }
+                crate::OBIS::InstantaneousActivePowerPlus(crate::Line::Line1, mr) => {
+                    assert_eq!(f64::from(&mr), 00.087);
+                }
+                crate::OBIS::InstantaneousActivePowerPlus(crate::Line::Line2, mr) => {
+                    assert_eq!(f64::from(&mr), 00.088);
+                }
+                crate::OBIS::InstantaneousActivePowerPlus(crate::Line::Line3, mr) => {
+                    assert_eq!(f64::from(&mr), 00.323);
+                }
+                _ => (), // Do not test the rest.
+            }
+        });
+    }
 }
